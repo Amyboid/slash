@@ -1,10 +1,11 @@
 "use client"
 
-import React from "react";
 import { useEffect, useState } from "react";
-
-export default function page({ params }: any) {
-  const { code } = React.use(params)
+type Params = {
+  code: string;
+};
+export default function page({ params }: {params: Params}) {
+  const { code } = params
   const [stats, setStats] = useState("");
   useEffect(() => {
     async function handleStats() {
