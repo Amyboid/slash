@@ -92,7 +92,7 @@ export default function Home() {
     });
     let data = await res.json()
     if(data.success){
-      let updatedUrls = allUrls.filter((url) => url.code!= code)
+      let updatedUrls = allUrls.filter((url:any) => url.code!= code)
       setAllUrls(updatedUrls)
     }
   }
