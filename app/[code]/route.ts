@@ -1,19 +1,28 @@
-import { incrementClicks } from "@/app/actions";
+import {
+  getRedirectUrl,
+  getRedirectUrlFromCache,
+  incrementClicks,
+  isRedirectUrlExistInCache,
+  setRedirectUrlToCache,
+} from "@/lib/actions";
 
 export async function GET(req: Request, { params }: any) {
   const { code } = await params;
-  console.log("code:", code);
-
   try {
-    const rows = await incrementClicks(code);
-    if (!rows || rows.length === 0) {
-      return new Response(JSON.stringify({ error: "Not found" }), {
-        status: 404,
-      });
+    incrementClicks(code);
+    if (await isRedirectUrlExistInCache(code)) {
+      const target = (await getRedirectUrlFromCache(code)) || "";
+      console.log("target in cache: ", target);
+      
+      return Response.redirect(target, 302);
     }
 
-    const target = rows[0].target;
+    const rows = await getRedirectUrl(code);
+    console.log("redirct url by code: ", rows);
+    
+    const target = rows[0];
     console.log("target: ", target);
+    setRedirectUrlToCache(code, target);
     try {
       new URL(target);
     } catch {
@@ -23,7 +32,8 @@ export async function GET(req: Request, { params }: any) {
     }
     return Response.redirect(target, 302);
   } catch (error) {
-    console.log(error);
+    console.log("Redirect error: ",error);
+    
     return new Response(JSON.stringify({ error: "Server error" }), {
       status: 500,
     });

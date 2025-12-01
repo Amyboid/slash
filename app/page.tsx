@@ -1,190 +1,118 @@
 "use client";
-import Input from "@/components/Input";
+import AddUrlForm from "@/components/AddUrlForm";
+import Logout from "@/components/Logout";
+import Profile from "@/components/Profile";
+import Button from "@/components/ui/Button";
+import SpinLoader from "@/components/ui/SpinLoader";
+import UrlCard from "@/components/UrlCard";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function Home() {
-  const [inputs, setInputs] = useState<{
-    targetUrl?: string;
-    shortCode?: string;
-  }>({ targetUrl: "", shortCode: "" });
-  const [formError, setFormError] = useState("");
-  const [toggleShortCode, setToggleShortCode] = useState(false);
+  const router = useRouter();
+  const [hostname, setHostname] = useState("");
+  const [showLoder, setShowLoder] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [allUrls, setAllUrls] = useState([{}]);
+  const [user, setUser] = useState("");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch("/api/links");
-        const data = await res.json();
-        console.log(data);
-        setAllUrls(data);
-      } catch (error) {
-        console.log("error getting url", error);
-      }
-    };
-    fetchData();
-  }, []);
-  function handleChange(e: any) {
-    const target = e.target;
-    const value = target.value;
-    const name = target.name;
-    setInputs((values) => ({ ...values, [name]: value }));
-  }
-  async function handleSubmit(e: any): Promise<void> {
-    let validationError = false;
-    setFormError("");
-    e.preventDefault();
-
-    if (!toggleShortCode) {
-      inputs.shortCode = "";
-    }
-    if (!validateUrl(inputs.targetUrl)) {
-      setFormError((prev) => prev + "Invalid url ");
-      validationError = true;
-    }
-    if (toggleShortCode) {
-      if (!validateShortCode(inputs.shortCode)) {
-        setFormError((prev) => prev + "Invalid shortcode");
-        validationError = true;
-      }
-    }
-    if (validationError) {
-      return;
-    }
-    console.log(inputs, toggleShortCode);
-    setInputs({ targetUrl: "", shortCode: "" });
-    const payload = {
-      targetUrl: inputs.targetUrl,
-      shortCode: toggleShortCode ? inputs.shortCode : "",
-    };
+  const fetchData = async () => {
+    setShowLoder(true);
     try {
-      const res = await fetch("/api/links", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
+      const res = await fetch("/api/links");
       const data = await res.json();
-      console.log();
-
-      if (data.success) {
-        setAllUrls((prev) => [
-          ...prev,
-          { code: data.response.code, target: data.response.target },
-        ]);
-      } else {
-      }
+      console.log(data);
+      setAllUrls(data);
+      setShowLoder(false);
     } catch (error) {
-      console.log("error creating url", error);
+      console.log("error getting url", error);
     }
-  }
+  };
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        const user = await res.json();
+        console.log(user);
+
+        if (!user.loggedIn) {
+          router.push("/login");
+        } else {
+          setUser(user.username);
+          fetchData();
+        }
+      } catch (error) {}
+    })();
+    setHostname(window.location.hostname);
+  }, []);
+
   async function handleDelete(code: string) {
     if (!code) {
       return;
     }
 
     console.log(code);
-    
+
     let res = await fetch(`/api/links/${code}`, {
       method: "DELETE",
     });
-    let data = await res.json()
-    if(data.success){
-      let updatedUrls = allUrls.filter((url:any) => url.code!= code)
-      setAllUrls(updatedUrls)
+    let data = await res.json();
+    console.log(data);
+
+    if (data.success) {
+      let updatedUrls = allUrls.filter((url: any) => url.code != code);
+      setAllUrls(updatedUrls);
     }
   }
 
+  function handleCreateForm(): void {
+    setShowCreateForm(true);
+  }
 
   return (
-    <div className="w-full h-screen flex flex-col items-center border gap-4">
-      <form
-        action=""
-        method="post"
-        className="sm:mt-40 mt-10 sm:w-[420px] w-[300px] h-[180px] p-3 rounded-lg bg-[#f2efef] flex flex-col justify-between"
-        onSubmit={handleSubmit}
-      >
-        <div className="w-full flex flex-col gap-2">
-          <Input
-            name="targetUrl"
-            placeholder="type long url..."
-            value={inputs.targetUrl}
-            handleChange={handleChange}
-            required
-          />
-          {toggleShortCode && (
+    <>
+      {user && (
+        <div className="min-w-[300px] md:w-5xl w-full h-screen overflow-x-scroll m-0 flex flex-col gap-8 py-6 sm:px-12 px-6 justify-between">
+          <Profile user={user} />
+          <div className="flex flex-col h-[80%] justify-between sm:gap-6">
+            <Button
+              handleClick={handleCreateForm}
+              title="Create"
+              className="ml-auto"
+            />
             <>
-              <Input
-                name="shortCode"
-                placeholder="type shortcode.."
-                value={inputs.shortCode}
-                handleChange={handleChange}
-                required
-              />
+              {showCreateForm && (
+                <AddUrlForm
+                  setShowCreateForm={setShowCreateForm}
+                  setAllUrls={setAllUrls}
+                />
+              )}
+
+              <div className="w-full sm:h-[450px] h-[88%] p-4 flex flex-col items-center border-4 justify-center gap-2 rounded">
+                {showLoder && <SpinLoader />}
+                {!showLoder && allUrls.length > 0 && (
+                  <div className="flex flex-col sm:grid sm:grid-cols-2 md:grid-cols-3 gap-0 h-full overflow-scroll">
+                    {allUrls.map((url: any, key) => {
+                      return (
+                        <UrlCard
+                          key={key}
+                          code={url.code}
+                          hostname={hostname}
+                          redirectUrl={url.target}
+                          handleDelete={handleDelete}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+                {allUrls.length === 0 && (
+                  <p className="text-center font-bold text-xl">No url is here</p>
+                )}
+              </div>
             </>
-          )}
-        </div>
-        <div>
-          {formError && <p className="text-xs text-red-700">{formError}</p>}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <label htmlFor="toggleShortCode" className="text-xs">
-                Use custom shortcode
-              </label>
-              <input
-                type="checkbox"
-                name="toggleShortCode"
-                checked={toggleShortCode}
-                onChange={(e) => setToggleShortCode(e.target.checked)}
-              />
-            </div>
-            <button
-              type="submit"
-              className="border rounded-lg p-2 px-3 ml-auto cursor-pointer"
-            >
-              Generate
-            </button>
           </div>
         </div>
-      </form>
-
-      <div className="sm:w-[620px] w-[320px] h-auto border">
-        {allUrls.length > 0 &&
-          allUrls.map((url: any, key) => {
-            return (
-              <ul key={key}>
-                <li>{url.code}</li>
-                <li>
-                  <a
-                    href={`/${url.code}`}
-                  >
-                    {url.code}
-                  </a>
-                </li>
-                <button onClick={() => handleDelete(url.code)}>delete</button>
-                <button><a href={`/api/links/${url.code}`}>stats</a></button>
-              </ul>
-            );
-          })}
-
-      </div>
-    </div>
+      )}
+    </>
   );
-}
-function validateUrl(targetUrl: string | undefined): boolean {
-  if (!targetUrl) return false;
-  try {
-    new URL(targetUrl);
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-function validateShortCode(shortCode: string | undefined): boolean {
-  if (!shortCode) return false;
-  let code = /^[A-Za-z0-9]{6,8}$/;
-  return code.test(shortCode);
 }

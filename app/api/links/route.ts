@@ -1,8 +1,10 @@
-import { getAllUrls, insertNewUrl } from "@/app/actions";
-import generateShortCode from "@/app/utils/generateShortCode";
+import { getAllUrls, insertNewUrl } from "@/lib/actions";
+import generateShortCode from "@/utils/generateShortCode";
 
 export async function POST(request: Request) {
   const req = await request.json();
+  // console.log("reqq",req);
+  
   let targetUrl = req.targetUrl;
   if (!targetUrl) {
     return Response.json({ error: "no target url provided" });
@@ -14,7 +16,7 @@ export async function POST(request: Request) {
 
   const data = { targetUrl: targetUrl, shortCode: shortCode };
   const response = await insertNewUrl(data);
-  console.log("rrs", response);
+  // console.log("rrs", response);
   return Response.json(response);
 }
 

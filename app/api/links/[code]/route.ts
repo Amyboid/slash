@@ -1,9 +1,9 @@
-import { deleteUrlByCode, getStatsByCode } from "@/app/actions";
+import { deleteUrlByCode, getStatsByCode } from "@/lib/actions";
 
 export async function GET(req: Request, { params }: any) {
   let { code } = await params;
   const response = await getStatsByCode(code);
-  console.log("resp", response);
+  console.log("stats: ", response);
   return Response.json(response);
 }
 
