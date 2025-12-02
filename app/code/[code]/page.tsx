@@ -12,7 +12,8 @@ type Stats = {
 };
 
 export default function page({ params }: { params: any }) {
-  const { code } = React.use(params);
+  const param = React.use<any>(params);
+  const code = param.code;
   const [stats, setStats] = useState<Stats>({
     code: "",
     target: "",
@@ -41,7 +42,10 @@ export default function page({ params }: { params: any }) {
         </p>
         {Object.entries(stats).map(([key, val], k) => (
           <p key={k} className="font-bold">
-            <span className="text-xs p-1 px-2 border-2 rounded bg-red-400">{key}</span>   <span>{val || "none"}</span>
+            <span className="text-xs p-1 px-2 border-2 rounded bg-red-400">
+              {key}
+            </span>{" "}
+            <span>{val || "none"}</span>
           </p>
         ))}
       </div>
