@@ -6,7 +6,10 @@ export async function insertNewUrl(data: any) {
   console.log("useris: ", user);
 
   if (!user) {
-    return Response.json({ error: "unauthorized" });
+    return {
+      status: 500,
+      msg: "Session expired"
+    };
   }
   try {
     const { targetUrl, shortCode } = data;
@@ -29,7 +32,6 @@ export async function insertNewUrl(data: any) {
     await redisClient.json.ARRAPPEND("url:table", "$.urls", payload);
     await redisClient.sAdd("shortcode:set", shortCode);
     return {
-      success: true,
       status: 200,
       response: { code: shortCode, target: targetUrl },
     };
@@ -37,7 +39,6 @@ export async function insertNewUrl(data: any) {
     console.log("error creating slash!!", error);
 
     return {
-      success: false,
       status: 409,
       response: error,
     };
@@ -56,6 +57,8 @@ export async function getAllUrls() {
   return response;
 }
 export async function incrementClicks(code: string) {
+  const dateObj = new Date()
+  const dateAndTime = dateObj.toDateString() + " " + dateObj.toLocaleTimeString()
   redisClient.json.numIncrBy(
     "url:table",
     `$.urls[?(@.code == '${code}')].clicked`,
@@ -64,7 +67,7 @@ export async function incrementClicks(code: string) {
   redisClient.json.set(
     "url:table",
     `$.urls[?(@.code == '${code}')].last_clicked`,
-    new Date()
+    dateAndTime
   );
 }
 
@@ -75,8 +78,6 @@ export async function getRedirectUrl(code: string): Promise<string> {
   if (!response) {
     return "";
   }
-
-  console.log("Type: ", typeof response, "res: ", response);
 
   return response[0];
 }
@@ -112,7 +113,7 @@ export async function deleteUrlByCode(code: string) {
       path: `$.urls[?(@.code == '${code}')]`,
     });
     console.log("res: ", res);
-
+    await redisClient.sRem("shortcode:set", code)
     if (res !== 1) {
       return {
         success: false,

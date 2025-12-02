@@ -3,6 +3,8 @@ import Input from "@/components/ui/Input";
 import { useEffect, useState } from "react";
 import Button from "./ui/Button";
 import SpinLoader from "./ui/SpinLoader";
+import { useDebounce } from "@/lib/debounce";
+import { useRouter } from "next/navigation";
 
 type FormProps = {
   setShowCreateForm: Function;
@@ -18,8 +20,29 @@ export default function AddUrlForm({
     shortCode?: string;
   }>({ targetUrl: "", shortCode: "" });
   const [formError, setFormError] = useState("");
+  const [targetUrlError, setTargetUrlError] = useState("");
+  const [shortcodeError, setShortcodeError] = useState("");
   const [toggleShortCode, setToggleShortCode] = useState(false);
-  // const [disableButton, setDisableButton] = useState(true);
+  const debouncedQuery = useDebounce(inputs, 600);
+  const router = useRouter()
+  useEffect(() => {
+    if (
+      debouncedQuery.shortCode &&
+      !validateShortCode(debouncedQuery.shortCode)
+    ) {
+      setShortcodeError("Invalid shortcode (length 6-8)");
+    } else {
+      setShortcodeError("");
+    }
+  }, [debouncedQuery.shortCode]);
+
+  useEffect(() => {
+    if (debouncedQuery.targetUrl && !validateUrl(debouncedQuery.targetUrl)) {
+      setTargetUrlError("Invalid url");
+    } else {
+      setTargetUrlError("");
+    }
+  }, [debouncedQuery.targetUrl]);
 
   const [showLoder, setShowLoder] = useState(false);
   function handleChange(e: any) {
@@ -29,24 +52,14 @@ export default function AddUrlForm({
     setInputs((values) => ({ ...values, [name]: value }));
   }
   async function handleSubmit(e: any): Promise<void> {
-    let validationError = false;
     setFormError("");
     e.preventDefault();
 
     if (!toggleShortCode) {
       inputs.shortCode = "";
     }
-    if (!validateUrl(inputs.targetUrl)) {
-      setFormError((prev) => prev + "Invalid url ");
-      validationError = true;
-    }
-    if (toggleShortCode) {
-      if (!validateShortCode(inputs.shortCode)) {
-        setFormError((prev) => prev + "Invalid shortcode (length 6-8)");
-        validationError = true;
-      }
-    }
-    if (validationError) {
+
+    if (shortcodeError || targetUrlError) {
       return;
     }
     console.log(inputs, toggleShortCode);
@@ -66,19 +79,30 @@ export default function AddUrlForm({
       });
 
       const data = await res.json();
-      if (data.success) {
+      console.log(data);
+
+      if (data.status === 200) {
         setAllUrls((prev: any) => [
           ...prev,
           { code: data.response.code, target: data.response.target },
         ]);
         setShowLoder(false);
-      } else {
-        setShowLoder(false);
+        setShowCreateForm(false);
       }
-      setShowCreateForm(false);
+      else if(data.status === 500){
+        setFormError(data.msg)
+        setTimeout(()=>{
+          setShowLoder(false);
+          router.push("/login")
+        }, 2000)
+      }
+      else {
+        setShowLoder(false);
+        setFormError(data.msg);
+      }
     } catch (error) {
-      setShowLoder(true);
-      setShowCreateForm(false);
+      setShowLoder(false);
+      setFormError(error as string);
       console.log("error creating url", error);
     }
   }
@@ -104,6 +128,7 @@ export default function AddUrlForm({
             handleChange={handleChange}
             required
           />
+          <span className="text-red-600 text-xs">{targetUrlError}</span>
           {toggleShortCode && (
             <>
               <Input
@@ -113,14 +138,18 @@ export default function AddUrlForm({
                 handleChange={handleChange}
                 required
               />
+              <span className="text-red-600 text-xs">{shortcodeError}</span>
             </>
           )}
         </div>
         <div>
-          {formError && <p className="text-xs text-red-700">{formError}</p>}
+          {formError && <p className="text-xs text-red-600">{formError}</p>}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <label htmlFor="toggleShortCode" className="text-xs sm:text-sm font-bold">
+              <label
+                htmlFor="toggleShortCode"
+                className="text-xs sm:text-sm font-bold"
+              >
                 Use custom shortcode
               </label>
               <input
@@ -138,7 +167,7 @@ export default function AddUrlForm({
               {!showLoder && <p>Generate</p>}
               {showLoder && (
                 <div className="flex justify-center">
-                  <SpinLoader size={20}/>
+                  <SpinLoader size={20} />
                 </div>
               )}
             </button>

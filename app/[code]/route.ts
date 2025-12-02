@@ -8,6 +8,7 @@ import {
 
 export async function GET(req: Request, { params }: any) {
   const { code } = await params;
+
   try {
     incrementClicks(code);
     if (await isRedirectUrlExistInCache(code)) {
@@ -15,8 +16,15 @@ export async function GET(req: Request, { params }: any) {
       console.log("target in cache: ", target);
       return Response.redirect(target, 302);
     }
-    
+
     const target = await getRedirectUrl(code);
+    const shortlink = req.url;
+    if (shortlink === target) {
+      return Response.json({
+        status: 404,
+        msg: "page not found"
+      });
+    }
     console.log("target: ", target);
     setRedirectUrlToCache(code, target);
     try {
@@ -28,8 +36,8 @@ export async function GET(req: Request, { params }: any) {
     }
     return Response.redirect(target, 302);
   } catch (error) {
-    console.log("Redirect error: ",error);
-    
+    console.log("Redirect error: ", error);
+
     return new Response(JSON.stringify({ error: "Server error" }), {
       status: 500,
     });

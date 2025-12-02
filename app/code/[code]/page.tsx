@@ -41,11 +41,11 @@ export default function page({ params }: { params: any }) {
           Stats
         </p>
         {Object.entries(stats).map(([key, val], k) => (
-          <p key={k} className="font-bold">
-            <span className="text-xs p-1 px-2 border-2 rounded bg-red-400">
+          <p key={k} className="font-bold w-full flex gap-2">
+            <span className="text-xs p-1 px-2 h-7 border-2 rounded bg-red-400">
               {key}
-            </span>{" "}
-            <span>{val || "none"}</span>
+            </span>
+            <span className="w-full overflow-y-auto">{val || "none"}</span>
           </p>
         ))}
       </div>

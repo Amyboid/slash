@@ -3,7 +3,6 @@ import generateShortCode from "@/utils/generateShortCode";
 
 export async function POST(request: Request) {
   const req = await request.json();
-  // console.log("reqq",req);
   
   let targetUrl = req.targetUrl;
   if (!targetUrl) {
@@ -13,10 +12,15 @@ export async function POST(request: Request) {
   if (!shortCode) {
     shortCode = generateShortCode();
   }
-
+  const origin = request.headers.get("origin") + "/" + shortCode
+  if (origin === targetUrl) {
+    return Response.json({
+      status: 400,
+      msg: "bad request, use different url than (origin+shortcode 🥴)"
+    })
+  }
   const data = { targetUrl: targetUrl, shortCode: shortCode };
-  const response = await insertNewUrl(data);
-  // console.log("rrs", response);
+  const response = await insertNewUrl(data); 
   return Response.json(response);
 }
 
