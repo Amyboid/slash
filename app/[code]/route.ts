@@ -13,14 +13,10 @@ export async function GET(req: Request, { params }: any) {
     if (await isRedirectUrlExistInCache(code)) {
       const target = (await getRedirectUrlFromCache(code)) || "";
       console.log("target in cache: ", target);
-      
       return Response.redirect(target, 302);
     }
-
-    const rows = await getRedirectUrl(code);
-    console.log("redirct url by code: ", rows);
     
-    const target = rows[0];
+    const target = await getRedirectUrl(code);
     console.log("target: ", target);
     setRedirectUrlToCache(code, target);
     try {

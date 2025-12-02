@@ -1,4 +1,3 @@
-import sql from "@/lib/db";
 import { getUserFromCookie } from "./auth";
 import redisClient from "./redis";
 
@@ -18,14 +17,15 @@ export async function insertNewUrl(data: any) {
         msg: "shortcode already exists, try different one!",
       };
     }
+    const userId = typeof user.sub === "number" ? user.sub : null;
     let payload = {
       code: shortCode,
       target: targetUrl,
       clicked: 0,
       last_clicked: null,
-      user_id: user.sub,
+      user_id: userId,
     };
-    console.log("payload: ", payload, Date.now());
+
     await redisClient.json.ARRAPPEND("url:table", "$.urls", payload);
     await redisClient.sAdd("shortcode:set", shortCode);
     return {
@@ -42,22 +42,6 @@ export async function insertNewUrl(data: any) {
       response: error,
     };
   }
-
-  // try {
-  //   await sql`INSERT INTO urls (code, target, user_id) VALUES (${shortCode}, ${targetUrl}, ${user.sub})`;
-  //   // await redisClient.json.
-  //   return {
-  //     success: true,
-  //     status: 200,
-  //     response: { code: shortCode, target: targetUrl },
-  //   };
-  // } catch (error) {
-  //   return {
-  //     success: false,
-  //     status: 409,
-  //     response: "duplicate shortcode",
-  //   };
-  // }
 }
 
 export async function getAllUrls() {
@@ -84,24 +68,17 @@ export async function incrementClicks(code: string) {
   );
 }
 
-// export async function incrementClicks(code: string) {
-//   const resp = await sql`
-//     UPDATE urls
-//     SET clicks = clicks + 1, last_clicked = NOW()
-//     WHERE code=${code}
-//     RETURNING target
-//     `;
-
-//   return resp
-// }
-export async function getRedirectUrl(code: string) {
-  const response = await redisClient.json.get("url:table", {
+export async function getRedirectUrl(code: string): Promise<string> {
+  const response: any = await redisClient.json.get("url:table", {
     path: `$.urls[?(@.code == '${code}')].target`,
   });
   if (!response) {
-    return null;
+    return "";
   }
-  return response;
+
+  console.log("Type: ", typeof response, "res: ", response);
+
+  return response[0];
 }
 export async function getStatsByCode(code: string) {
   const response = await redisClient.json.get("url:table", {
