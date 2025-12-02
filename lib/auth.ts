@@ -1,4 +1,3 @@
-import sql from "@/lib/db";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { cookies } from "next/headers";
@@ -11,7 +10,7 @@ if (!JWT_SECRET) {
 }
 function generateToken(data: any) {
   console.log("generating token: ", data);
-  
+
   return jwt.sign(data, JWT_SECRET, { expiresIn: JWT_EXP });
 }
 
@@ -40,7 +39,7 @@ export async function signup(username: string, password: string) {
     await redisClient.json.ARRAPPEND("user:table", "$.user", userdata);
     await redisClient.sAdd("username:set", username);
     console.log("userId after signup: ", userId);
-    
+
     const token = generateToken({ sub: userId, username: username });
     return {
       status: 200,
@@ -56,7 +55,7 @@ export async function signup(username: string, password: string) {
 
 export async function login(username: string, password: string) {
   try {
-    const rows: Array<any> = await redisClient.json.get("user:table", {
+    const rows: any = await redisClient.json.get("user:table", {
       path: `$.user[?(@.username == '${username}')]`,
     });
 
@@ -64,7 +63,6 @@ export async function login(username: string, password: string) {
       return { status: 401, msg: "username not exist" };
     }
 
-    
     const user = rows[0];
     console.log("rows: ", user);
     const match = await bcrypt.compare(password, user.password);
@@ -85,7 +83,7 @@ export async function login(username: string, password: string) {
   }
 }
 
-export async function getUserFromCookie() {
+export async function getUserFromCookie(): Promise<any> {
   const cookie = (await cookies()).get("session");
   if (!cookie) {
     return null;
